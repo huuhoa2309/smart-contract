@@ -1,0 +1,14 @@
+{
+  "name": "smart_contract",
+  "version": "1.0.0",
+  "description": "smart contract solidity",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "smartcntract"
+  ],
+  "author": "vjetnodejs",
+  "license": "ISC"
+}
