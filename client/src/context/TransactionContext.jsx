@@ -20,11 +20,38 @@ export const TransactionsProvider = ({ children }) => {
     const [formData, setformData] = useState({ addressTo: "", amount: "", keyword: "", message: "" });
     const [isLoading, setIsLoading] = useState(false);
     const [transactionCount, setTransactionCount] = useState(localStorage.getItem("transactionCount"));
+    const [transactions, setTransactions] = useState([]);
 
 
     const handleChange = (e, name) => {
         setformData((prevState) => ({ ...prevState, [name]: e.target.value }));
     }
+    const getAllTransactions = async () => {
+        try {
+            if (ethereum) {
+                const transactionsContract = getEthereumContract();
+
+                const availableTransactions = await transactionsContract.getAllTransactions();
+
+                const structuredTransactions = availableTransactions.map((transaction) => ({
+                    addressTo: transaction.receiver,
+                    addressFrom: transaction.sender,
+                    timestamp: new Date(transaction.timestamp.toNumber() * 1000).toLocaleString(),
+                    message: transaction.message,
+                    keyword: transaction.keyword,
+                    amount: parseInt(transaction.amount._hex) / (10 ** 18)
+                }));
+
+                console.log(structuredTransactions);
+
+                setTransactions(structuredTransactions);
+            } else {
+                console.log("Ethereum không tồn tại");
+            }
+        } catch (error) {
+            console.log(error);
+        }
+    };
 
     const checkIfWalletIsConnect = async () => {
         try {
@@ -33,6 +60,7 @@ export const TransactionsProvider = ({ children }) => {
             if (accounts.length) {
                 setCurrentAccount(accounts[0]);
                 // get toàn bộ giao dịch
+                getAllTransactions();
             } else {
                 console.log("Không tìm thấy tài khoản nào!");
             };
@@ -43,6 +71,23 @@ export const TransactionsProvider = ({ children }) => {
         }
 
     };
+
+    const checkIfTransactionsExists = async () => {
+        try {
+            if (ethereum) {
+                const transactionsContract = getEthereumContract();
+                const currentTransactionCount = await transactionsContract.getTransactionCount();
+
+                window.localStorage.setItem("transactionCount", currentTransactionCount);
+            }
+        } catch (error) {
+            console.log(error);
+
+            throw new Error("Không thể tìm thấy đối tượng");
+        }
+    };
+
+
     const connectWallet = async () => {
         try {
             if (!ethereum) return alert("Vui lòng tải và kết nối với ví metamask!  Link: https://metamask.io/");
@@ -81,6 +126,7 @@ export const TransactionsProvider = ({ children }) => {
 
             const transactionsCount = await transactionsContract.getTransactionCount();
             setTransactionCount(transactionsCount.toNumber());
+            window.location.reload();
 
         } catch (error) {
             console.log(error);
@@ -89,12 +135,13 @@ export const TransactionsProvider = ({ children }) => {
     };
     useEffect(() => {
         checkIfWalletIsConnect();
-    }, []);
+        checkIfTransactionsExists();
+    }, [transactionCount]);
 
 
 
     return (
-        <TransactionContext.Provider value={{ connectWallet, currentAccount, formData, setformData, handleChange, sendTransaction }}>
+        <TransactionContext.Provider value={{ connectWallet, currentAccount, formData, setformData, handleChange, sendTransaction, transactions, isLoading }}>
             {children}
         </TransactionContext.Provider>
     );
